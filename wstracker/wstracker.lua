@@ -1,7 +1,7 @@
 addon = {
     name    = 'WSTracker',
     author  = 'Xua',
-    version = '0.7',
+    version = '1.0',
 };
 
 require('common');
@@ -11,7 +11,7 @@ local imgui = require('imgui');
 local io = require('io');
 local json = require('json');
 
--- Default Settings
+
 local default_settings = {
     points = 0,
     target = 300,
@@ -45,30 +45,30 @@ local function ensure_presets_exist()
     end
 end
 
+
 ensure_presets_exist();
 local s = settings.load(default_settings) or default_settings;
 local completed_alerted = false;
 
+
 local function load_preset(name)
     local path = string.format('%sconfig/addons/%s/presets.json', AshitaCore:GetInstallPath(), addon.name);
     if (not ashita.fs.exists(path)) then return nil end
-    
     local f = io.open(path, 'r');
     if (not f) then return nil end
     local content = f:read('*all');
     f:close();
-    
     if (content == nil or content == '') then return nil end
-    
     local presets = json.decode(content);
     return presets[name:lower()] or nil;
 end
 
-ashita.events.register('packet_in', 'packet_in_cb', function (e)
+local function process_packet(e)
     if (e.id == 0x28) then
         local packet = e.data;
+        if (packet:len() < 28) then return end
+
         local actor_id = ashita.bits.unpack_be(packet, 40, 32);
-        
         if (actor_id == GetPlayerEntity().ServerId) then
             local category = ashita.bits.unpack_be(packet, 82, 4);
             local is_dead = (ashita.bits.unpack_be(packet, 213, 4) == 6);
@@ -92,7 +92,15 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
             end
         end
     end
+end
+
+ashita.events.register('packet_in', 'packet_in_cb', function (e)
+    local status, err = pcall(process_packet, e);
+    if not status then
+        return; 
+    end
 end);
+
 
 ashita.events.register('d3d_present', 'present_cb', function ()
     if not s.display.visible then return end
