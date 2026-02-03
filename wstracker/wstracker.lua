@@ -1,5 +1,5 @@
 addon = {
-    name    = 'WSPTracker',
+    name    = 'WSTracker',
     author  = 'Xua',
     version = '0.7',
 };
@@ -30,7 +30,7 @@ local function ensure_presets_exist()
     if (not ashita.fs.exists(path)) then
         local default_presets = {
             trial = 300,
-            break = 500,
+            ["break"] = 500,
             relic = 100,
             mythic = 250,
             empyrean = 1500,
