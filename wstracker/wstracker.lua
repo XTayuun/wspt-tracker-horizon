@@ -9,7 +9,7 @@ local chat = require('chat');
 local settings = require('settings');
 local imgui = require('imgui');
 local io = require('io');
-local json = require('json'); -- Explicitly require the JSON library to fix the 'nil value' error
+local json = require('json');
 
 -- Default Settings
 local default_settings = {
@@ -19,21 +19,18 @@ local default_settings = {
     display = { visible = true, x = 100, y = 100 }
 };
 
--- Function to ensure the config directory and presets.json exist for the user
 local function ensure_presets_exist()
     local dir = string.format('%sconfig/addons/%s/', AshitaCore:GetInstallPath(), addon.name);
     local path = dir .. 'presets.json';
     
-    -- Create directory if it doesn't exist
     if (not ashita.fs.exists(dir)) then
         ashita.fs.create_directory(dir);
     end
 
-    -- Create default presets file if it doesn't exist or is blank
     if (not ashita.fs.exists(path)) then
         local default_presets = {
             trial = 300,
-            destroyer = 500,
+            break = 500,
             relic = 100,
             mythic = 250,
             empyrean = 1500,
@@ -41,7 +38,6 @@ local function ensure_presets_exist()
         };
         local f = io.open(path, 'w');
         if (f) then
-            -- Use the local json variable for encoding
             f:write(json.encode(default_presets));
             f:close();
             print(chat.header(addon.name) .. chat.message('Created default presets.json in config folder.'));
@@ -49,12 +45,10 @@ local function ensure_presets_exist()
     end
 end
 
--- Initialize Environment
 ensure_presets_exist();
 local s = settings.load(default_settings) or default_settings;
 local completed_alerted = false;
 
--- Preset Loader with safety checks
 local function load_preset(name)
     local path = string.format('%sconfig/addons/%s/presets.json', AshitaCore:GetInstallPath(), addon.name);
     if (not ashita.fs.exists(path)) then return nil end
@@ -64,15 +58,12 @@ local function load_preset(name)
     local content = f:read('*all');
     f:close();
     
-    -- Ensure the file isn't empty before decoding
     if (content == nil or content == '') then return nil end
     
     local presets = json.decode(content);
-    -- Return the value if it exists, otherwise return nil gracefully
     return presets[name:lower()] or nil;
 end
 
--- Event: Packet Handling (HorizonXI Action Packet)
 ashita.events.register('packet_in', 'packet_in_cb', function (e)
     if (e.id == 0x28) then
         local packet = e.data;
@@ -103,7 +94,6 @@ ashita.events.register('packet_in', 'packet_in_cb', function (e)
     end
 end);
 
--- Event: UI Rendering
 ashita.events.register('d3d_present', 'present_cb', function ()
     if not s.display.visible then return end
     imgui.SetNextWindowSize({ 180, 85 }, ImGuiCond_FirstUseEver);
@@ -125,7 +115,6 @@ ashita.events.register('d3d_present', 'present_cb', function ()
     end
 end);
 
--- Event: Command Handling
 ashita.events.register('command', 'command_cb', function (e)
     local args = e.command:args();
     if (#args > 0 and args[1]:lower() == '/wspt') then
