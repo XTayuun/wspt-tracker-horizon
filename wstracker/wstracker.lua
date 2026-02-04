@@ -1,7 +1,13 @@
 addon = {
     name    = 'WSTracker',
     author  = 'Xua',
-    version = '1.1',
+    version = '1.2',
+};
+
+local SC_LEVELS = {
+    [288]=1, [289]=1, [290]=1, [291]=1, [292]=1, [293]=1, [294]=1, [295]=1, -- Lv1 (Liquefaction, etc)
+    [296]=2, [297]=2, [298]=2, [299]=2,                                    -- Lv2 (Fusion, etc)
+    [300]=4, [301]=4                                                       -- Lv3 (Light/Dark)
 };
 
 require('common');
@@ -42,31 +48,31 @@ ashita.events.register('packet_in', 'wsptracker_packet_cb', function (e)
         local my_id = AshitaCore:GetMemoryManager():GetParty():GetMemberServerId(0);
 
         if (actor_id == my_id) then
-            local byte10 = struct.unpack('B', packet, 11);
-            local category = bit.band(bit.rshift(byte10, 2), 0x0f);
+            local byte11 = struct.unpack('B', packet, 11);
+            local category = bit.band(bit.rshift(byte11, 2), 0x0F);
 
+            -- 1. Award base 1 point for the WS
             if (category == 3) then
-                local total_gained = 1;
-
-                local byte26 = struct.unpack('B', packet, 27);
-                local sc_level = bit.band(bit.rshift(byte26, 5), 0x07);
-
-                if (sc_level == 1) then
-                    total_gained = 2;
-                elseif (sc_level == 2) then
-                    total_gained = 3;
-                elseif (sc_level == 3) then
-                    total_gained = 5;
-                end
-                
-                s.points = s.points + total_gained;
+                s.points = s.points + 1;
                 settings.save();
                 completed_alerted = false;
-                print(chat.header(addon.name) .. chat.message(string.format("Weapon Skill! +%d (Total: %d)", total_gained, s.points)));
+                print(chat.header(addon.name) .. chat.message(string.format("Weapon Skill! +1 (Total: %d)", s.points)));
             
+            -- 2. Award BONUS points if an explicit SC message is found
+            elseif (category == 3 or category == 4) then
+                local message_id = bit.band(bit.rshift(struct.unpack('H', packet, 27), 2), 0x7FF);
+                local bonus = SC_LEVELS[message_id];
+                
+                if (bonus) then
+                    s.points = s.points + bonus;
+                    settings.save();
+                    print(chat.header(addon.name) .. chat.message(string.format("Skillchain Bonus! +%d (Total: %d)", bonus, s.points)));
+                end
+
+            -- 3. DRK Mode Kill tracking
             elseif (s.drk_mode and category == 1) then
-                local byte26 = struct.unpack('B', packet, 27);
-                local msg = bit.band(bit.rshift(byte26, 5), 0x07);
+                local byte27 = struct.unpack('B', packet, 27);
+                local msg = bit.band(bit.rshift(byte27, 5), 0x07);
                 if (msg == 6) then
                     s.points = s.points + 1;
                     settings.save();
@@ -75,6 +81,7 @@ ashita.events.register('packet_in', 'wsptracker_packet_cb', function (e)
                 end
             end
 
+            -- Goal Alert
             if (s.points >= s.target and not completed_alerted) then
                 AshitaCore:GetChatManager():QueueCommand(-1, '/ashita.play_sound 210');
                 print(chat.header(addon.name) .. chat.success('GOAL REACHED!'));
