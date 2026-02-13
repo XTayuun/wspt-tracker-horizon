@@ -1,36 +1,62 @@
-# WSPTracker (Ashita v4)
+WSTracker
 
-A lightweight Weapon Skill Point and Killing Blow tracker designed specifically for HorizonXI. 
+WSTracker is a lightweight, accurate Ashita v4 addon designed to track Weapon Skill points for Magian Trials, Mythic Weapon Unlocks, and the Dark Knight Job Unlock quest.
 
-## Features
-- **Auto-Installation**: Automatically creates necessary configuration files on first load.
-- **Trial Tracking**: Monitors Weapon Skill points, including skillchain bonuses (Lv.1: 2pts, Lv.2: 3pts, Lv.3: 5pts).
-- **DRK Unlock Mode**: Dedicated mode for the "Blade of Darkness" quest that tracks only standard melee killing blows.
-- **On-Screen Display**: A clean ImGui window with a progress bar and status alerts.
-- **Preset System**: Quick-load targets for various weapons using custom commands.
+Unlike other trackers that rely on simple text scanning or guesswork, WSTracker uses recursive packet parsing to read the server's incoming action packets. This ensures 100% accuracy in detecting Skillchain bonuses (Level 1, 2, and 3) even in complex combat situations involving multiple targets or buffs.
+Key Features
 
-## Default Presets
-The following presets are automatically generated and can be called using `/wspt <name>`:
+    Smart Weapon Detection: Automatically detects your equipped weapon and switches modes instantly:
 
-| Preset Name | Target Value | Typical Use Case |
-| :--- | :--- | :--- |
-| `trial` | 300 | Standard Latent/Trial Weapons |
-| `break` | 500 | "Break" weapons (formerly Destroyer) |
-| `relic` | 100 | Relic Weapon stages |
-| `mythic` | 250 | Mythic Weapon stages |
-| `empyrean` | 1500 | Empyrean Weapon stages |
-| `magian` | 400 | Specific Magian Trials |
+        Latent Weapons (300 pts): Automatically sets target to 300 and enables Skillchain bonuses.
 
-## Commands
-| Command | Description |
-| :--- | :--- |
-| `/wspt trial` | Switches to standard WS Trial mode (300 pt target). |
-| `/wspt drk` | Switches to DRK Unlock mode (100 melee kills target). |
-| `/wspt <preset>` | Loads a custom target (e.g., `/wspt break` for 500 pts). |
-| `/wspt target <num>` | Manually sets a custom point target. |
-| `/wspt set <num>` | Manually sets your current point progress. |
-| `/wspt reset` | Resets current progress to 0. |
+        Broken Weapons (500 pts): Automatically sets target to 500 for WS unlock quests.
 
-## Customization
-You can add your own custom weapon targets by editing the `presets.json` file located in:  
-`Ashita 4/config/addons/WSPTracker/presets.json`.
+        Chaosbringer (100 kills): Automatically enters "DRK Quest Mode" (Target 100, no SC bonuses).
+
+    Accurate Skillchain Math: Correctly calculates points based on the trial rules:
+
+        Base WS: +1 point
+
+        Level 1 SC: +1 bonus (Total 2)
+
+        Level 2 SC: +2 bonus (Total 3)
+
+        Level 3 SC: +4 bonus (Total 5)
+
+    Visual Progress Bar: A movable, minimal on-screen interface showing your exact progress.
+
+    Completion Alerts: Notifies you in chat and visually when a trial is complete.
+
+Supported Weapons
+
+WSTracker currently contains an internal database for the following:
+
+    Job Unlock: Chaosbringer (Dark Knight)
+
+    WS Unlock (300 Pts): Sword of Trials, Club of Trials, Pole of Trials, Scythe of Trials, etc.
+
+    Mythic/Relic WS (500 Pts): Destroyers, Hofud, Valkkyrie's Fork, Sandung, etc.
+
+Note: If you equip a weapon not in the database, the addon defaults to "Standard Mode" (300 pts) but allows you to manually set the target.
+Installation
+
+    Download wstracker.lua.
+
+    Place the file in your Ashita addons folder:
+    Ashita/addons/wstracker/wstracker.lua
+
+    Load the addon in game:
+
+    /addon load wstracker
+
+Commands
+Command	Description
+/wspt reset	Resets the current point counter to 0.
+/wspt set <number>	Manually sets the current points (e.g., /wspt set 150).
+/wspt target <number>	Manually changes the target goal (e.g., /wspt target 500).
+/wspt drk	Manually toggles "DRK Mode" (disables Skillchain bonuses).
+How It Works
+
+WSTracker listens for incoming 0x28 (Action) packets. Instead of scanning the entire packet blindly, it uses a recursive bit-unpacker to navigate the packet structure. It specifically locates the AdditionalEffect field where Skillchain messages are stored.
+
+This method eliminates "false positives" (where damage numbers are mistaken for Skillchain IDs) and ensures that bonuses are applied only once per action.
